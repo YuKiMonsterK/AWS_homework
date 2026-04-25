@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>K-Map 邏輯工具 113213015</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .cell { transition: all 0.2s; cursor: pointer; user-select: none; min-height: 70px; }
+        .active { background-color: #3b82f6 !important; color: white; border-color: #1d4ed8; transform: scale(0.98); }
+        .step-card { border-left: 4px solid #f59e0b; padding: 12px; margin-bottom: 12px; background: #fffbeb; border-radius: 4px; }
+        .var-label { font-size: 0.75rem; color: #94a3b8; font-weight: bold; }
+    </style>
+</head>
+<body class="bg-slate-50 p-4 md:p-8">
+    <div class="max-w-5xl mx-auto">
+        <div class="bg-white p-6 md:p-10 rounded-3xl shadow-2xl border border-slate-200">
+            <h1 class="text-3xl font-black text-slate-800 mb-2 italic">K-Map Top-Down Explainer</h1>
+
+         
+            <div class="flex flex-wrap items-center gap-4 mb-8 p-5 bg-slate-100 rounded-2xl">
+                <span class="font-bold text-slate-600">設定變數：</span>
+                <button onclick="initKMap(2)" class="px-5 py-2 bg-white rounded-xl hover:bg-blue-600 hover:text-white transition shadow-sm font-bold">2 變數</button>
+                <button onclick="initKMap(3)" class="px-5 py-2 bg-white rounded-xl hover:bg-blue-600 hover:text-white transition shadow-sm font-bold">3 變數</button>
+                <button onclick="initKMap(4)" class="px-5 py-2 bg-white rounded-xl hover:bg-blue-600 hover:text-white transition shadow-sm font-bold">4 變數</button>
+            </div>
+
+            <div id="kmap-wrapper" class="mb-10 overflow-x-auto p-4 bg-white border border-slate-100 rounded-2xl shadow-inner"></div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                <div class="lg:col-span-2">
+                    <div class="bg-slate-900 rounded-2xl p-8 text-white shadow-xl">
+                        <div class="text-xs text-blue-400 uppercase tracking-widest mb-2 font-black">最簡 SOP 結果</div>
+                        <div id="result-text" class="text-4xl font-mono text-white break-all font-bold">0</div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-3 bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+                    <h3 class="font-bold text-slate-800 mb-6 text-xl flex items-center gap-2">
+                        <span class="p-2 bg-amber-100 text-amber-600 rounded-lg">Step</span> 優先最大覆蓋推導
+                    </h3>
+                    <div id="steps-list" class="space-y-4 max-h-[400px] overflow-y-auto pr-2 text-sm text-slate-700">
+                        點擊格子開始模擬...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentVars = 4;
+        let cellStates = [];
+        const varChars = ['A', 'B', 'C', 'D'];
+        const layoutOrders = { 2: [0, 1, 2, 3], 3: [0, 1, 3, 2, 4, 5, 7, 6], 4: [0, 1, 3, 2, 4, 5, 7, 6, 12, 13, 15, 14, 8, 9, 11, 10] };
+
+        function initKMap(v) {
+            currentVars = v;
+            cellStates = new Array(Math.pow(2, v)).fill(0);
+            renderUI();
+            updateLogic();
+        }
+
+        function renderUI() {
+            const wrapper = document.getElementById('kmap-wrapper');
+            const cols = (currentVars === 2) ? 2 : 4;
+            const rows = (currentVars === 4) ? 4 : 2;
+            const order = layoutOrders[currentVars];
+            let html = `<div class="grid gap-3" style="grid-template-columns: 100px repeat(${cols}, 1fr); min-width: 500px;">`;
+            const topLeft = currentVars === 2 ? "A \\ B" : (currentVars === 3 ? "A \\ BC" : "AB \\ CD");
+            html += `<div class="flex items-center justify-center font-bold text-blue-600 border-b-2 border-r-2 border-slate-100">${topLeft}</div>`;
+            const colLabels = (currentVars === 2) ? ['0','1'] : ['00','01','11','10'];
+            colLabels.forEach(l => html += `<div class="text-center font-mono font-bold text-slate-400 py-2">${l}</div>`);
+            const rowLabels = (currentVars <= 3) ? ['0','1'] : ['00','01','11','10'];
+            for(let r=0; r<rows; r++) {
+                html += `<div class="flex items-center justify-end pr-6 font-mono font-bold text-slate-400 border-r-2 border-slate-50">${rowLabels[r]}</div>`;
+                for(let c=0; c<cols; c++) {
+                    const mIdx = order[r*cols + c];
+                    html += `<div onclick="handleCellClick(${mIdx})" class="cell border border-slate-100 rounded-xl flex flex-col items-center justify-center bg-white hover:bg-slate-50 ${cellStates[mIdx] ? 'active' : ''}">
+                                <span class="var-label italic font-normal">m${mIdx}</span>
+                                <span class="text-2xl font-black">${cellStates[mIdx]}</span>
+                             </div>`;
+                }
+            }
+            wrapper.innerHTML = html + '</div>';
+        }
+
+        function handleCellClick(m) { cellStates[m] = 1 - cellStates[m]; renderUI(); updateLogic(); }
+
+        function updateLogic() {
+            const stepsEl = document.getElementById('steps-list');
+            const resultEl = document.getElementById('result-text');
+            const activeMinterms = cellStates.map((v, i) => v === 1 ? i : null).filter(v => v !== null);
+
+            if (activeMinterms.length === 0) { resultEl.innerText = "0"; stepsEl.innerHTML = "等待輸入..."; return; }
+            if (activeMinterms.length === Math.pow(2, currentVars)) { resultEl.innerText = "1"; stepsEl.innerHTML = "全域覆蓋，結果為 1"; return; }
+
+            // 實作 Top-Down 邏輯：由大到小找 PI
+            let remaining = new Set(activeMinterms);
+            let chosenPIs = [];
+            let logs = [];
+
+            // 檢查所有可能的分組大小 (16, 8, 4, 2, 1)
+            for (let size of [8, 4, 2, 1]) {
+                if (size > Math.pow(2, currentVars)) continue;
+                
+                let possibleGroups = getAllPossibleGroups(size);
+                for (let group of possibleGroups) {
+                    // 如果這個群組裡的每一格都是 1
+                    if (group.every(m => cellStates[m] === 1)) {
+                        // 且這個群組能蓋掉至少一個還沒被蓋掉的 1 (或它是 Essential PI)
+                        // 簡單化處理：如果群組內有尚未覆蓋的 1，就選它
+                        if (group.some(m => remaining.has(m))) {
+                            const term = getTermForGroup(group);
+                            chosenPIs.push(term);
+                            group.forEach(m => remaining.delete(m));
+                            
+                            logs.push(`<div class="step-card">
+                                <b>發現一個 ${size} 格的大區域：</b> m(${group.join(',')})<br/>
+                                <span class="text-blue-600 font-bold">推導：</span> 該區域內有 ${Math.log2(size)} 個變數狀態改變被剔除。<br/>
+                                <span class="text-amber-600 font-bold">結果項：</span> ${term}
+                            </div>`);
+                        }
+                    }
+                }
+            }
+
+            stepsEl.innerHTML = logs.join('');
+            resultEl.innerText = [...new Set(chosenPIs)].join(" + ");
+        }
+
+        function getAllPossibleGroups(size) {
+            // 這裡簡化實作：手動定義常見的 K-Map 幾何分組規則（或使用規律計算）
+            // 為了 DEMO，這裡使用 QM 的 Prime Implicant 結果來模擬 Top-Down 的視覺呈現
+            return getPrimeImplicantsForCurrentState().filter(g => g.length === size);
+        }
+
+        function getPrimeImplicantsForCurrentState() {
+            // 使用 QM 演算法核心來找出所有最大的 PI (不分先後)
+            let current = new Set(cellStates.map((v, i) => v === 1 ? i.toString(2).padStart(currentVars, '0') : null).filter(v => v));
+            let allPIs = [];
+            while (current.size > 0) {
+                let next = new Set(), combined = new Set(), arr = Array.from(current);
+                for (let i = 0; i < arr.length; i++) {
+                    for (let j = i + 1; j < arr.length; j++) {
+                        let res = ""; let diff = 0;
+                        for(let k=0; k<currentVars; k++) {
+                            if(arr[i][k] !== arr[j][k]) { diff++; res += "-"; }
+                            else res += arr[i][k];
+                        }
+                        if (diff === 1) { next.add(res); combined.add(arr[i]); combined.add(arr[j]); }
+                    }
+                }
+                arr.forEach(item => { if (!combined.has(item)) allPIs.push(item); });
+                current = next;
+            }
+            return allPIs.map(p => {
+                let m = [];
+                for(let i=0; i<Math.pow(2, currentVars); i++) {
+                    let b = i.toString(2).padStart(currentVars, '0');
+                    let match = true;
+                    for(let k=0; k<currentVars; k++) if(p[k] !== '-' && p[k] !== b[k]) match = false;
+                    if(match) m.push(i);
+                }
+                return m;
+            });
+        }
+
+        function getTermForGroup(indices) {
+            let bins = indices.map(i => i.toString(2).padStart(currentVars, '0'));
+            let res = "";
+            for (let i = 0; i < currentVars; i++) {
+                let first = bins[0][i];
+                if (bins.every(b => b[i] === first)) res += varChars[i] + (first === '0' ? "'" : "");
+            }
+            return res || "1";
+        }
+
+        window.onload = () => initKMap(4);
+    </script>
+</body>
+</html>
