@@ -1,211 +1,38 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <title>K-Map 邏輯工具 113213015</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .cell { transition: all 0.2s; cursor: pointer; user-select: none; min-height: 70px; }
-        .active { background-color: #3b82f6 !important; color: white; border-color: #1d4ed8; transform: scale(0.98); }
-        .step-card { border-left: 4px solid #f59e0b; padding: 12px; margin-bottom: 12px; background: #fffbeb; border-radius: 4px; }
-        .var-label { font-size: 0.75rem; color: #94a3b8; font-weight: bold; }
-    </style>
-</head>
-<body class="bg-slate-50 p-4 md:p-8">
-    <div class="max-w-5xl mx-auto">
-        <div class="bg-white p-6 md:p-10 rounded-3xl shadow-2xl border border-slate-200">
-            <h1 class="text-3xl font-black text-slate-800 mb-2 italic">K-Map Top-Down Explainer</h1>
+<html>
+<body>
 
-            <div class="flex flex-wrap items-center gap-4 mb-8 p-5 bg-slate-100 rounded-2xl">
-                <span class="font-bold text-slate-600">設定變數：</span>
-                <button onclick="initKMap(2)" class="px-5 py-2 bg-white rounded-xl hover:bg-blue-600 hover:text-white transition shadow-sm font-bold">2 變數</button>
-                <button onclick="initKMap(3)" class="px-5 py-2 bg-white rounded-xl hover:bg-blue-600 hover:text-white transition shadow-sm font-bold">3 變數</button>
-                <button onclick="initKMap(4)" class="px-5 py-2 bg-white rounded-xl hover:bg-blue-600 hover:text-white transition shadow-sm font-bold">4 變數</button>
-            </div>
+<ol>
+<li>何謂憑證、https、http、port
+	<ul>
+	<li>憑證、HTTP、HTTPS、Port HTTP是超文字傳輸協定，用來在瀏覽器與伺服器之間傳送資料，但傳輸內容是明文，容易被竊聽或竄改。</li>
+	<li>憑證是由受信任的第三方機構簽發的數位身分證明，裡面包含網站的公開金鑰與身分資訊，證明網站不是釣魚假站。</li>
+	<li>HTTPS是HTTP加上SSL/TLS加密，透過憑證建立加密連線，確保資料傳輸時的安全與完整性。</li>
+	<li>Port是連接埠，用數字代表一台電腦上的特定服務或程式。IP能找到主機，Port則能找到主機裡的具體服務。</li>
+	</ul></li>
+<li>inbound outbound防火牆是什麽，怎麽設定<br/>
+	<ul>
+	<li>Inbound是入站流量，是外部設備主動連進本機或內部伺服器的連線請求。</li>
+	<li>Outbound是出站流量，管理本機主動連到外部網路的請求以及其回應。</li>
+	<li>設定方式：在系統防火牆或網路設定介面中加入規則：先選定要管制Inbound還是Outbound，接著設定來源IP或網段、要開放或封鎖的通訊協定與Port，最後指定動作是要允許還是拒絕阻擋。</li>
+	</ul></li>
+<li>什麽是CIDR<br/>
+CIDR是無類別域間路由，用來取代Class A、B、C分級制度，提高IPv4位址的使用彈性與效率。 寫法通常是IP後面加上斜線和數字，<br/>例如192.168.1.0/24。斜線後面代表子網路遮罩中有多少個bit屬於網路識別碼，剩下的bit分配給主機使用。數字越大代表網路範圍越小、可容納的主機越少，反之。</li>
+<li>什麽是Dns?什麽是IP，什麽是域名?什麽是URL<br/>
+	<ul>
+	<li>DNS、IP、域名、URL IP是網路上每台設備的數字門牌，資料封包都是靠IP來定址與傳送。 域名是為了解決IP不好記而設計的可讀名稱，例如google.com。</li>
+	<li>DNS的主要功能是將人們輸入的域名解析轉換成電腦能理解的IP位址。 </li>
+	<li>URL是完整的網頁位址，定義了要用什麼協定、去哪台主機、抓取哪個具體檔案或路徑。</li>
+	</ul></li>
+<li>一個URL，例如https://www.ncnu.edu.tw:1234/class/upload.php?file=abc，是什麽意思
+	<ul>
+	<li>https:// 是通訊協定，表示使用加密的HTTPS連線</li>
+	<li>www.ncnu.edu.tw 是主機名稱與域名，代表要連線的目標伺服器</li>
+	<li>:1234 是連接埠，代表這台伺服器開在自訂的Port 1234</li>
+	<li>class/upload.php 是資源路徑，代表目標伺服器上class目錄底下的upload.php程式</li>
+	<li>?file=abc 是查詢參數（Query String），表示將名為file、內容為abc的參數傳遞給upload.php處理<br/>
+	</ul></li>
+</ol>
 
-            <div id="kmap-wrapper" class="mb-10 overflow-x-auto p-4 bg-white border border-slate-100 rounded-2xl shadow-inner"></div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
-                <div class="lg:col-span-2">
-                    <div class="bg-slate-900 rounded-2xl p-8 text-white shadow-xl">
-                        <div class="text-xs text-blue-400 uppercase tracking-widest mb-2 font-black">最簡 SOP 結果</div>
-                        <div id="result-text" class="text-4xl font-mono text-white break-all font-bold">0</div>
-                    </div>
-                </div>
-
-                <div class="lg:col-span-3 bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
-                    <h3 class="font-bold text-slate-800 mb-6 text-xl flex items-center gap-2">
-                        <span class="p-2 bg-amber-100 text-amber-600 rounded-lg">Step</span> 優先最大覆蓋推導
-                    </h3>
-                    <div id="steps-list" class="space-y-4 max-h-[400px] overflow-y-auto pr-2 text-sm text-slate-700">
-                        點擊格子開始模擬...
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        let currentVars = 4;
-        let cellStates = [];
-        const varChars = ['A', 'B', 'C', 'D'];
-        const layoutOrders = { 2: [0, 1, 2, 3], 3: [0, 1, 3, 2, 4, 5, 7, 6], 4: [0, 1, 3, 2, 4, 5, 7, 6, 12, 13, 15, 14, 8, 9, 11, 10] };
-
-        function initKMap(v) {
-            currentVars = v;
-            cellStates = new Array(Math.pow(2, v)).fill(0);
-            renderUI();
-            updateLogic();
-        }
-
-        function renderUI() {
-            const wrapper = document.getElementById('kmap-wrapper');
-            const cols = (currentVars === 2) ? 2 : 4;
-            const rows = (currentVars === 4) ? 4 : 2;
-            const order = layoutOrders[currentVars];
-            
-            // 加入 display: grid 保底，避免 Tailwind CDN 沒載入時排版壞掉
-            let html = `<div class="grid gap-3" style="display: grid; grid-template-columns: 100px repeat(${cols}, 1fr); min-width: 500px;">`;
-            
-            const topLeft = currentVars === 2 ? "A \\ B" : (currentVars === 3 ? "A \\ BC" : "AB \\ CD");
-            html += `<div class="flex items-center justify-center font-bold text-blue-600 border-b-2 border-r-2 border-slate-100">${topLeft}</div>`;
-            
-            const colLabels = (currentVars === 2) ? ['0','1'] : ['00','01','11','10'];
-            colLabels.forEach(l => html += `<div class="text-center font-mono font-bold text-slate-400 py-2">${l}</div>`);
-            
-            const rowLabels = (currentVars <= 3) ? ['0','1'] : ['00','01','11','10'];
-            for(let r=0; r<rows; r++) {
-                html += `<div class="flex items-center justify-end pr-6 font-mono font-bold text-slate-400 border-r-2 border-slate-50">${rowLabels[r]}</div>`;
-                for(let c=0; c<cols; c++) {
-                    const mIdx = order[r*cols + c];
-                    html += `<div onclick="handleCellClick(${mIdx})" class="cell border border-slate-100 rounded-xl flex flex-col items-center justify-center bg-white hover:bg-slate-50 ${cellStates[mIdx] ? 'active' : ''}">
-                                <span class="var-label italic font-normal">m${mIdx}</span>
-                                <span class="text-2xl font-black">${cellStates[mIdx]}</span>
-                             </div>`;
-                }
-            }
-            wrapper.innerHTML = html + '</div>';
-        }
-
-        function handleCellClick(m) { cellStates[m] = 1 - cellStates[m]; renderUI(); updateLogic(); }
-
-        function updateLogic() {
-            const stepsEl = document.getElementById('steps-list');
-            const resultEl = document.getElementById('result-text');
-            const activeMinterms = cellStates.map((v, i) => v === 1 ? i : null).filter(v => v !== null);
-
-            if (activeMinterms.length === 0) { resultEl.innerText = "0"; stepsEl.innerHTML = "等待輸入..."; return; }
-            if (activeMinterms.length === Math.pow(2, currentVars)) { resultEl.innerText = "1"; stepsEl.innerHTML = "全域覆蓋，結果為 1"; return; }
-
-            // 1. 找出所有 Prime Implicants (PI)
-            let allPIs = getPrimeImplicantsForCurrentState();
-            let remaining = new Set(activeMinterms);
-            let chosenPIs = [];
-            let logs = [];
-
-            // 2. 尋找 Essential Prime Implicants (EPI)
-            let mintermToPIs = {};
-            activeMinterms.forEach(m => {
-                mintermToPIs[m] = allPIs.filter(pi => pi.includes(m));
-            });
-
-            let epis = new Set();
-            activeMinterms.forEach(m => {
-                if (mintermToPIs[m].length === 1) epis.add(mintermToPIs[m][0]);
-            });
-
-            epis.forEach(epi => {
-                const term = getTermForGroup(epi);
-                chosenPIs.push(term);
-                let covered = [];
-                epi.forEach(m => {
-                    if (remaining.has(m)) { remaining.delete(m); covered.push(m); }
-                });
-                logs.push(`<div class="step-card border-l-amber-500 bg-amber-50">
-                    <b>發現 Essential PI (必要項)：</b> m(${epi.join(',')})<br/>
-                    <span class="text-blue-600 font-bold">涵蓋：</span> 獨立覆蓋了 m(${covered.join(',')})<br/>
-                    <span class="text-amber-600 font-bold">結果項：</span> ${term}
-                </div>`);
-            });
-
-            // 3. 處理剩餘尚未覆蓋的 minterms
-            while (remaining.size > 0) {
-                let bestPI = null;
-                let maxCover = 0;
-                let bestCovered = [];
-
-                allPIs.forEach(pi => {
-                    let currentCovered = pi.filter(m => remaining.has(m));
-                    let coverCount = currentCovered.length;
-                    if (coverCount > maxCover) {
-                        maxCover = coverCount; bestPI = pi; bestCovered = currentCovered;
-                    } else if (coverCount === maxCover && maxCover > 0) {
-                        if (bestPI && pi.length > bestPI.length) { bestPI = pi; bestCovered = currentCovered; }
-                    }
-                });
-
-                if (bestPI) {
-                    const term = getTermForGroup(bestPI);
-                    if (!chosenPIs.includes(term)) chosenPIs.push(term);
-                    bestCovered.forEach(m => remaining.delete(m));
-                    logs.push(`<div class="step-card border-l-blue-500 bg-blue-50">
-                        <b>貪婪選擇最大補充項：</b> m(${bestPI.join(',')})<br/>
-                        <span class="text-blue-600 font-bold">補充涵蓋：</span> m(${bestCovered.join(',')})<br/>
-                        <span class="text-amber-600 font-bold">結果項：</span> ${term}
-                    </div>`);
-                } else {
-                    break;
-                }
-            }
-
-            stepsEl.innerHTML = logs.join('');
-            resultEl.innerText = chosenPIs.join(" + ");
-        }
-
-        function getPrimeImplicantsForCurrentState() {
-            let current = new Set(cellStates.map((v, i) => v === 1 ? i.toString(2).padStart(currentVars, '0') : null).filter(v => v !== null));
-            let allPIs = [];
-            while (current.size > 0) {
-                let next = new Set(), combined = new Set(), arr = Array.from(current);
-                for (let i = 0; i < arr.length; i++) {
-                    for (let j = i + 1; j < arr.length; j++) {
-                        let res = ""; let diff = 0;
-                        for(let k=0; k<currentVars; k++) {
-                            if(arr[i][k] !== arr[j][k]) { diff++; res += "-"; }
-                            else res += arr[i][k];
-                        }
-                        if (diff === 1) { next.add(res); combined.add(arr[i]); combined.add(arr[j]); }
-                    }
-                }
-                arr.forEach(item => { if (!combined.has(item)) allPIs.push(item); });
-                current = next;
-            }
-            return allPIs.map(p => {
-                let m = [];
-                for(let i=0; i<Math.pow(2, currentVars); i++) {
-                    let b = i.toString(2).padStart(currentVars, '0');
-                    let match = true;
-                    for(let k=0; k<currentVars; k++) if(p[k] !== '-' && p[k] !== b[k]) match = false;
-                    if(match) m.push(i);
-                }
-                return m;
-            });
-        }
-
-        function getTermForGroup(indices) {
-            let bins = indices.map(i => i.toString(2).padStart(currentVars, '0'));
-            let res = "";
-            for (let i = 0; i < currentVars; i++) {
-                let first = bins[0][i];
-                if (bins.every(b => b[i] === first)) res += varChars[i] + (first === '0' ? "'" : "");
-            }
-            return res || "1";
-        }
-
-        // 使用 DOMContentLoaded 確保網頁元素完全載入後再繪製圖表，取代 window.onload
-        document.addEventListener('DOMContentLoaded', () => {
-            initKMap(4);
-        });
-    </script>
 </body>
 </html>
